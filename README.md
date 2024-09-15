@@ -25,7 +25,7 @@ This dashboard aims to create a captivating user experience that merges the epic
 * shinymaterial
 * highcharter
 * echarts4r
-* reactable
+* DT
 * dplyr
 * bslib
 
