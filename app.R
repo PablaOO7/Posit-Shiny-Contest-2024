@@ -3,8 +3,8 @@ library(shiny)
 library(shinymaterial)
 library(highcharter)
 library(echarts4r)
-library(reactable)
 library(dplyr)
+library(DT)
 library(bslib)
 
 # Sample Star Wars data
@@ -45,7 +45,7 @@ ui <- material_page(
       }
     "))
   ),
-
+  
   # Intro Section
   material_parallax(
     image_source = "https://wallpaperaccess.com/full/11801.jpg"
@@ -130,7 +130,9 @@ ui <- material_page(
   div(class = "content-section",
       material_card(
         title = "Character Statistics",
-        reactableOutput("character_table")
+        # reactableOutput("character_table")
+        DTOutput("character_table")
+        
       )
   )
 )
@@ -170,7 +172,7 @@ server <- function(input, output, session) {
       e_tooltip(trigger = "item", formatter = "{a} <br/>{b}: {c} ({d}%)") %>%
       e_legend(orient = "vertical", left = "left", textStyle = list(color = "#FFD700"))
   })
-
+  
   output$communities_chart <- renderHighchart({
     df <- data.frame(
       stringsAsFactors = FALSE,
@@ -210,52 +212,56 @@ server <- function(input, output, session) {
         )
       )
   })
-  
-  
-  output$character_table <- renderReactable({
-    reactable(
+
+  output$character_table <- renderDT({
+    datatable(
       star_wars_data,
-      theme = reactableTheme(
-        backgroundColor = "rgba(28, 28, 28, 0.8)",
-        color = "#FFD700",
-        headerStyle = list(
-          backgroundColor = "rgba(44, 44, 44, 0.8)",
-          color = "#FFD700"
+      options = list(
+        dom = 't',  # This shows only the table, removing all other elements
+        ordering = FALSE,  # Disables column sorting
+        paging = FALSE,  # Disables pagination
+        info = FALSE,  # Removes "Showing X to Y of Z entries"
+        searching = FALSE,  # Removes the search bar
+        autoWidth = TRUE,
+        columnDefs = list(
+          list(
+            targets = 1,
+            render = JS("
+            function(data, type, row, meta) {
+              if (type === 'display') {
+                var color = row[3]; // lightsaber color
+                var beam = '<div style=\"display: inline-block; width: 100px; height: 20px; background: linear-gradient(to right, ' + color + ' ' + data + '%, transparent ' + data + '%); border-radius: 0 10px 10px 0;\"></div>';
+                var hilt = '<div style=\"display: inline-block; width: 20px; height: 20px; background-color: #808080; border-radius: 3px;\"></div>';
+                return hilt + beam + ' ' + data;
+              }
+              return data;
+            }
+          ")
+          ),
+          list(
+            targets = 3,
+            render = JS("
+            function(data, type, row, meta) {
+              if (type === 'display') {
+                return '<div style=\"background-color: ' + data + '; width: 20px; height: 20px; border-radius: 50%;\"></div>';
+              }
+              return data;
+            }
+          ")
+          )
         )
       ),
-      columns = list(
-        character = colDef(name = "Character"),
-        force_power = colDef(
-          name = "Force Power",
-          cell = function(value) {
-            width <- paste0(value, "%")
-            div(
-              style = list(
-                background = "#FFD700",
-                width = width,
-                height = "75%"
-              ),
-              value
-            )
-          }
-        ),
-        battles_won = colDef(name = "Battles Won"),
-        lightsaber_color = colDef(
-          name = "Lightsaber Color",
-          cell = function(value) {
-            div(
-              style = list(
-                backgroundColor = value,
-                width = "20px",
-                height = "20px",
-                borderRadius = "50%"
-              )
-            )
-          }
-        ),
-        side = colDef(name = "Side")
+      rownames = FALSE,
+      colnames = c("Character", "Force Power", "Battles Won", "Lightsaber Color", "Side"),
+      style = 'bootstrap',
+      class = 'compact',
+      selection = 'none'
+    ) %>% 
+      formatStyle(
+        columns = c('character', 'force_power', 'battles_won', 'lightsaber_color', 'side'),
+        backgroundColor = 'rgba(28, 28, 28, 0.8)',
+        color = '#FFD700'
       )
-    )
   })
 }
 
